@@ -14,8 +14,7 @@ on:
 
 jobs:
   docker-build-vault-migration:
-    #TODO: change to "uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@v1.0.0"
-    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@DEVOPS-393-vault-dev-migration
+    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@main
     with:
       runner: avn-runner
       config_creds: false
