@@ -17,7 +17,7 @@ on:
       aws_account_id:
         required: true
         type: string
-      working_directory:
+      git_context:
         required: false
         type: string
         default: .
@@ -42,7 +42,8 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials
         if: ${{ inputs.config_creds }}
@@ -64,9 +65,15 @@ jobs:
         if: github.ref == 'refs/heads/${{ inputs.default_branch }}'
         run: echo "DOCKER_TAG=${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:${GITHUB_SHA::7},${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:latest" >> $GITHUB_ENV
 
+      - name: Create tag for merge
+        if: github.ref == 'refs/heads/${{ inputs.default_branch }}'
+        run: |
+          pwd
+          ls
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: "{{defaultContext}}:${{ inputs.working_directory }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
