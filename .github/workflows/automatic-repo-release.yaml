@@ -1,0 +1,12 @@
+name: Automatic Infra-scripts Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  github-release:
+    #TODO: change to "uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-releases.yaml@v1.0.0"
+    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-release.yaml@main
+    secrets: inherit
