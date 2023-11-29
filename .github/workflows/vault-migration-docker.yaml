@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'python/vault-migration'
+      - 'python/vault-migration/**'
   push:
     branches:
       - main
     paths:
-      - 'python/vault-migration'
+      - 'python/vault-migration/**'
 
 jobs:
   docker-build-vault-migration:
