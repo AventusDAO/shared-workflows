@@ -15,7 +15,7 @@ on:
 
 jobs:
   docker-build-vault-migration:
-    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@v1.0.0
+    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@DEVOPS-393-final-fix-3
     with:
       runner: avn-runner
       config_creds: false
