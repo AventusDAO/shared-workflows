@@ -34,13 +34,12 @@ on:
       aws_secret_key:
         required: false
 
-defaults:
-  run:
-    working-directory: ${{ inputs.working_directory }}
-
 jobs:
   docker-build:
     runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
