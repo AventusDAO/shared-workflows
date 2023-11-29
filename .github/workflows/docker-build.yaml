@@ -50,6 +50,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_key }}
           aws-region: ${{ inputs.aws_region }}
 
+      - name: remove any existing docker tag
+        if: github.ref != 'refs/heads/${{ inputs.default_branch }}'
+        run: unset $DOCKER_TAG
+
       - name: Login to the AWS registry
         run: |
           aws ecr get-login-password --region ${{ inputs.aws_region }} | docker login --username AWS --password-stdin ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com
