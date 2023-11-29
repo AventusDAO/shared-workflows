@@ -8,5 +8,5 @@ on:
 jobs:
   github-release:
     #TODO: change to "uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-releases.yaml@v1.0.0"
-    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-release.yaml@main
+    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-releases.yaml@main
     secrets: inherit
