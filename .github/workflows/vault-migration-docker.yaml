@@ -5,8 +5,8 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'python/vault-migration/**'
+    #paths:
+    #  - 'python/vault-migration/**'
   push:
     branches:
       - main
