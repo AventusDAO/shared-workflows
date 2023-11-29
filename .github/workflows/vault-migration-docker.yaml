@@ -5,8 +5,8 @@ on:
   pull_request:
     branches:
       - main
-    #paths:
-    #  - 'python/vault-migration/**'
+    paths:
+      - 'python/vault-migration/**'
   push:
     branches:
       - main
@@ -15,7 +15,7 @@ on:
 
 jobs:
   docker-build-vault-migration:
-    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@DEVOPS-393-final-fix-3
+    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@v2.0.0
     with:
       runner: avn-runner
       config_creds: false
