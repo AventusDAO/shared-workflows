@@ -22,4 +22,6 @@ jobs:
       aws_region: eu-west-1
       aws_account_id: 931945598683
       ecr_repository_name: vault-migration
+      default_branch: main
+      git_context: ./python/vault-migration
     secrets: inherit

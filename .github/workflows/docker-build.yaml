@@ -62,12 +62,6 @@ jobs:
         if: github.ref == 'refs/heads/${{ inputs.default_branch }}'
         run: echo "DOCKER_TAG=${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:${GITHUB_SHA::7},${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:latest" >> $GITHUB_ENV
 
-      - name: Create tag for merge
-        if: github.ref == 'refs/heads/${{ inputs.default_branch }}'
-        run: |
-          pwd
-          ls
-
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
