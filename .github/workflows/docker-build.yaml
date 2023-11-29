@@ -17,7 +17,7 @@ on:
       aws_account_id:
         required: true
         type: string
-      context:
+      working_directory:
         required: false
         type: string
         default: .
@@ -33,6 +33,10 @@ on:
         required: false
       aws_secret_key:
         required: false
+
+defaults:
+  run:
+    working-directory: ${{ inputs.working_directory }}
 
 jobs:
   docker-build:
@@ -64,6 +68,6 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: ${{ inputs.context }}
+          context: .
           push: true
           tags: ${{ env.DOCKER_TAG }}

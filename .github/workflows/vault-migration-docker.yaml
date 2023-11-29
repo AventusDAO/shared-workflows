@@ -12,10 +12,6 @@ on:
     paths:
       - 'python/vault-migration/**'
 
-defaults:
-  run:
-    working-directory: ./python/vault-migration
-
 jobs:
   docker-build-vault-migration:
     #TODO: change to "uses: Aventus-Network-Services/Infra-scripts/.github/workflows/docker-build.yaml@v1.0.0"
@@ -26,4 +22,5 @@ jobs:
       aws_region: eu-west-1
       aws_account_id: 931945598683
       ecr_repository_name: vault-migration
+      working_directory: ./python/vault-migration
     secrets: inherit
