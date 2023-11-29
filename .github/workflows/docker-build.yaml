@@ -53,7 +53,7 @@ jobs:
       - name: remove any existing docker tag
         run: |
           unset $DOCKER_TAG
-          echo 
+          echo ${{ github.ref }}
 
       - name: Login to the AWS registry
         run: |
