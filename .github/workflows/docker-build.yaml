@@ -37,9 +37,6 @@ on:
 jobs:
   docker-build:
     runs-on: ${{ inputs.runner }}
-    defaults:
-      run:
-        working-directory: ${{ inputs.working_directory }}
     timeout-minutes: 10
     steps:
       - name: Set up Docker Buildx
