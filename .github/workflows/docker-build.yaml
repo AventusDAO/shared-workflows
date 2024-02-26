@@ -95,7 +95,7 @@ jobs:
           if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7} >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Create docker tag for ${GITHUB_REF#refs/*/}
         if: ${{ inputs.create_git_ref_dtag }}
@@ -103,10 +103,9 @@ jobs:
           if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/} >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: TEST
-        if: ${{ env.DOCKER_TAG != '' }}
         run: echo $DOCKER_TAG
 
       - name: Build and push
