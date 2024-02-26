@@ -77,7 +77,7 @@ jobs:
         if: ${{ inputs.create_pr_dtag }}
         run: |
           if [[ -n $DOCKER_TAG ]]; then
-            TAG_PREFIX="${{env.DOCKER_TAG}},"
+            TAG_PREFIX="${{DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr-${{ github.event.number }}" >> $GITHUB_ENV
 
@@ -85,7 +85,7 @@ jobs:
         if: ${{ inputs.create_latest_dtag }}
         run: |
           if [[ -n $DOCKER_TAG ]]; then
-            TAG_PREFIX="${{env.DOCKER_TAG}},"
+            TAG_PREFIX="${{DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:latest" >> $GITHUB_ENV
 
@@ -93,7 +93,7 @@ jobs:
         if: ${{ inputs.create_commit_hash_dtag }}
         run: |
           if [[ -n $DOCKER_TAG ]]; then
-            TAG_PREFIX="${{env.DOCKER_TAG}},"
+            TAG_PREFIX="${{DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7}" >> $GITHUB_ENV
 
@@ -101,12 +101,9 @@ jobs:
         if: ${{ inputs.create_git_ref_dtag }}
         run: |
           if [[ -n $DOCKER_TAG ]]; then
-            TAG_PREFIX="${{env.DOCKER_TAG}},"
+            TAG_PREFIX="${{DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
-      - name: TEST
-        run: echo $DOCKER_TAG
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
