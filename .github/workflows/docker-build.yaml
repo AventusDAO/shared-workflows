@@ -50,6 +50,9 @@ on:
       aws_secret_key:
         required: false
 
+ENV:
+  ECR_REPO: ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}
+
 jobs:
   docker-build:
     runs-on: ${{ inputs.runner }}
@@ -76,7 +79,7 @@ jobs:
           if [[ -n ${{env.DOCKER_TAG}} ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:pr-${{ github.event.number }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr-${{ github.event.number }}" >> $GITHUB_ENV
 
       - name: Create latest tag
         if: ${{ inputs.create_latest_dtag }}
@@ -84,7 +87,7 @@ jobs:
           if [[ -n ${{env.DOCKER_TAG}} ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:latest" >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:latest" >> $GITHUB_ENV
 
       - name: Create commit hash tag
         if: ${{ inputs.create_commit_hash_dtag }}
@@ -92,7 +95,7 @@ jobs:
           if [[ -n ${{env.DOCKER_TAG}} ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:${GITHUB_SHA::7} >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7} >> $GITHUB_ENV
 
       - name: Create docker tag for ${GITHUB_REF#refs/*/}
         if: ${{ inputs.create_git_tag_dtag }}
@@ -100,7 +103,7 @@ jobs:
           if [[ -n ${{env.DOCKER_TAG}} ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:${GITHUB_REF#refs/*/} >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/} >> $GITHUB_ENV
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
