@@ -50,7 +50,7 @@ on:
       aws_secret_key:
         required: false
 
-ENV:
+env:
   ECR_REPO: ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}
 
 jobs:
