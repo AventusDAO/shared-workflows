@@ -79,7 +79,7 @@ jobs:
           if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="$DOCKER_TAG,"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr_${{ github.event.number }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr${{ github.event.number }}" >> $GITHUB_ENV
 
       - name: Create latest tag
         if: ${{ inputs.create_latest_dtag }}
