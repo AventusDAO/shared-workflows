@@ -84,7 +84,7 @@ jobs:
       - name: Create latest tag
         if: ${{ inputs.create_latest_dtag }}
         run: |
-          if [[ -n ${{env.DOCKER_TAG}} ]]; then
+          if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:latest" >> $GITHUB_ENV
@@ -92,7 +92,7 @@ jobs:
       - name: Create commit hash tag
         if: ${{ inputs.create_commit_hash_dtag }}
         run: |
-          if [[ -n ${{env.DOCKER_TAG}} ]]; then
+          if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7} >> $GITHUB_ENV
@@ -100,10 +100,14 @@ jobs:
       - name: Create docker tag for ${GITHUB_REF#refs/*/}
         if: ${{ inputs.create_git_ref_dtag }}
         run: |
-          if [[ -n ${{env.DOCKER_TAG}} ]]; then
+          if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/} >> $GITHUB_ENV
+
+      - name: TEST
+        if: ${{ env.DOCKER_TAG != '' }}
+        run: echo $DOCKER_TAG
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
