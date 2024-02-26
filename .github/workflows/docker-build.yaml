@@ -76,7 +76,7 @@ jobs:
       - name: Create tag for PR
         if: ${{ inputs.create_pr_dtag }}
         run: |
-          if [[ -n ${{ env.DOCKER_TAG }} ]]; then
+          if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="${{env.DOCKER_TAG}},"
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr-${{ github.event.number }}" >> $GITHUB_ENV
