@@ -28,11 +28,30 @@ on:
         required: false
         type: string
         default: master
+      create_pr_dtag:
+        required: false
+        type: boolean
+        default: false
+      create_latest_dtag:
+        required: false
+        type: boolean
+        default: false
+      create_commit_hash_dtag:
+        required: false
+        type: boolean
+        default: false
+      create_git_ref_dtag:
+        required: false
+        type: boolean
+        default: false
     secrets:
       aws_access_key:
         required: false
       aws_secret_key:
         required: false
+
+env:
+  ECR_REPO: ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}
 
 jobs:
   docker-build:
@@ -55,16 +74,47 @@ jobs:
           aws ecr get-login-password --region ${{ inputs.aws_region }} | docker login --username AWS --password-stdin ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com
 
       - name: Create tag for PR
-        if: ${{ ! contains(github.ref, inputs.default_branch) }}
-        run: echo "DOCKER_TAG=${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:pr-${{ github.event.number }}" >> $GITHUB_ENV
+        if: ${{ inputs.create_pr_dtag }}
+        run: |
+          if [[ -n $DOCKER_TAG ]]; then
+            TAG_PREFIX="$DOCKER_TAG,"
+          fi
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:pr-${{ github.event.number }}" >> $GITHUB_ENV
 
-      - name: Create tag for merge
-        if: ${{ contains(github.ref, inputs.default_branch) }}
-        run: echo "DOCKER_TAG=${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:${GITHUB_SHA::7},${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}:latest" >> $GITHUB_ENV
+      - name: Create latest tag
+        if: ${{ inputs.create_latest_dtag }}
+        run: |
+          if [[ -n $DOCKER_TAG ]]; then
+            TAG_PREFIX="$DOCKER_TAG,"
+          fi
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:latest" >> $GITHUB_ENV
+
+      - name: Create commit hash tag
+        if: ${{ inputs.create_commit_hash_dtag }}
+        run: |
+          if [[ -n $DOCKER_TAG ]]; then
+            TAG_PREFIX="$DOCKER_TAG,"
+          fi
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Create docker tag for ${GITHUB_REF#refs/*/}
+        if: ${{ inputs.create_git_ref_dtag }}
+        run: |
+          if [[ -n $DOCKER_TAG ]]; then
+            TAG_PREFIX="$DOCKER_TAG,"
+          fi
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Build and push
+        if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
           context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
+
+      - name: Fail if no DOCKER_TAGS are specified
+        if: ${{ env.DOCKER_TAG == '' }}
+        run: |
+          echo "NO DOCKER TAGS SPECIFIED. ACTION FAILED. PLEASE SET ONE OR MORE OF THE FOLLOWING VARIABLES TO TRUE: create_pr_dtag, create_latest_dtag, create_commit_hash_dtag, create_git_tag_dtag"
+          exit 1
