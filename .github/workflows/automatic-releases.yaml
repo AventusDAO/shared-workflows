@@ -7,11 +7,9 @@ on:
         required: false
         type: string
         default: none
-      token:
-        required: false
-        type: string
-        default: ${{ github.token }}
-
+    secrets:
+      envPat:
+        required: true
 
 jobs:
   tag:
@@ -30,7 +28,7 @@ jobs:
         uses: anothrNick/github-tag-action@v1
         id: tag
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.envPat }}
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.default_bump }}
 
