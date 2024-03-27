@@ -112,6 +112,7 @@ jobs:
           context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
+          provenance: false
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
