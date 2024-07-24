@@ -116,15 +116,12 @@ jobs:
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Build and push
-        if: ${{ env.DOCKER_TAG != '' }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: ${{ env.WORKING_DIR }}
+          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ env.DOCKER_TAG }}
-          provenance: false
-          build-args: ${{ inputs.docker_args_list }}
-          file: ${{ inputs.dockerfile }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
