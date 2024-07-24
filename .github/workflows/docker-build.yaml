@@ -116,7 +116,7 @@ jobs:
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
-          context: ${{ inputs.git_context }}
+          context: ${{ env.WORKING_DIR }}
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
