@@ -50,7 +50,6 @@ on:
       dockerfile:
         required: false
         type: string
-        default: Dockerfile
     secrets:
       aws_access_key:
         required: false
@@ -66,9 +65,6 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 10
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
