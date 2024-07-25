@@ -132,7 +132,7 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
-          dockerfile: /src/vault/Dockerfile
+          file: /src/vault/Dockerfile
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
