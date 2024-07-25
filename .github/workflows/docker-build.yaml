@@ -50,9 +50,6 @@ on:
       dockerfile:
         required: false
         type: string
-      working_directory:
-        required: false
-        type: string
     secrets:
       aws_access_key:
         required: false
