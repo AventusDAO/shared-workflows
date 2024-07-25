@@ -127,7 +127,7 @@ jobs:
           build-args: ${{ inputs.docker_args_list }}
           file: ${{ inputs.dockerfile }}
           build-contexts: |
-            default=${{ inputs.working_directory }}
+            project=${{ inputs.working_directory }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
