@@ -115,7 +115,8 @@ jobs:
 
       - name: Change to working directory
         if: ${{ inputs.working_directory != '' }}
-        run: cd ${{ inputs.working_directory }}
+        run: |
+          cd ${{ inputs.working_directory }}
           ls -l -a
 
       - name: List working directory
