@@ -122,8 +122,8 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
-          working-directory: ${{ inputs.git_context }}
           file: "${{ inputs.git_context }}/Dockerfile"
+        working-directory: ${{ inputs.git_context }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
