@@ -58,7 +58,7 @@ on:
 
 env:
   ECR_REPO: ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}
-  WORKING_DIR: ./src/vault
+  WORKING_DIR: src/vault
 
 jobs:
   docker-build:
