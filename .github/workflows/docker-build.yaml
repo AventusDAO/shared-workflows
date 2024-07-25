@@ -120,13 +120,11 @@ jobs:
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
-          #context: "${{ github.workspace }}/${{ inputs.git_context }}"
           context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
-          #file: ./src/vault/Dockerfile #${{ inputs.dockerfile }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
