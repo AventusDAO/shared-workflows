@@ -58,7 +58,6 @@ on:
 
 env:
   ECR_REPO: ${{ inputs.aws_account_id }}.dkr.ecr.${{ inputs.aws_region }}.amazonaws.com/${{ inputs.ecr_repository_name }}
-  WORKING_DIR: ./src/vault
 
 jobs:
   docker-build:
@@ -118,7 +117,7 @@ jobs:
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
-          context: ${{ inputs.git_context }}
+          context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
