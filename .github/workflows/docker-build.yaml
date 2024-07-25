@@ -125,7 +125,7 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
-          file: /scr/vault/Dockerfile #${{ inputs.dockerfile }}
+          file: /src/vault/Dockerfile #${{ inputs.dockerfile }}
           build-contexts: |
             project=${{ github.workspace }}/${{ inputs.working_directory }}
 
