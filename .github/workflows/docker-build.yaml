@@ -116,25 +116,17 @@ jobs:
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: Print github.workspace
-        run: |
-          echo "GitHub Workspace: $GITHUB_WORKSPACE"
-
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
-          context: "${{ inputs.git_context }}"
+          context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
           file: ${{ inputs.dockerfile }}
-          build-contexts: |
-            project=${{ github.workspace }}/${{ inputs.working_directory }}
-          working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-
-
+        working-directory: ${{ inputs.git_context }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
