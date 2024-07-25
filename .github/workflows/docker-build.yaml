@@ -47,9 +47,6 @@ on:
       docker_args_list:
         required: false
         type: string
-      dockerfile:
-        required: false
-        type: string
     secrets:
       aws_access_key:
         required: false
