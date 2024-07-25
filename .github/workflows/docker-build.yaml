@@ -126,7 +126,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: "{{defaultContext}}:${{ inputs.git_context }}"
-          build-contexts: ${{ inputs.working_directory }}
+          build-contexts: "working-directory=${{ inputs.working_directory }}"
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
