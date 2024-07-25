@@ -120,7 +120,7 @@ jobs:
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:${{ inputs.git_context }}"/src/vault
+          context: "{{defaultContext}}:${{ inputs.git_context }}/src/vault"
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
