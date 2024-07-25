@@ -116,9 +116,10 @@ jobs:
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: change working directory
+      - name: Change to working directory
+        if: ${{ inputs.working_directory != '' }}
         run: |
-          cd ./src/vault
+          cd ${{ inputs.working_directory }}
           ls -l -a
 
       - name: Build and push
@@ -131,8 +132,6 @@ jobs:
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
           file: ./src/vault/Dockerfile #${{ inputs.dockerfile }}
-          build-contexts: |
-            project=${{ github.workspace }}/${{ inputs.working_directory }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
