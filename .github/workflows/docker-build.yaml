@@ -119,6 +119,7 @@ jobs:
       - name: change working directory
         run: |
           cd ./src/vault
+          ls -l -a
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
