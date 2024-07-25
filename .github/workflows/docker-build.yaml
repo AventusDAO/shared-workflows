@@ -47,6 +47,9 @@ on:
       docker_args_list:
         required: false
         type: string
+      dockerfile:
+        required: false
+        type: string
       working_directory:
         required: false
         type: string
@@ -113,15 +116,9 @@ jobs:
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: Change to working directory
-        if: ${{ inputs.working_directory != '' }}
-        run: |
-          cd ${{ inputs.working_directory }}
-          ls -l -a
 
-      - name: List working directory
-        if: ${{ inputs.working_directory != '' }}
-        run: ls -l -a
+      - name: Change to working directory
+        run: cd ${{ inputs.git_context }}
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
@@ -132,7 +129,8 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
           build-args: ${{ inputs.docker_args_list }}
-          file: ./src/vault/Dockerfile
+          file: ${{ inputs.dockerfile }}
+        working-directory: ${{ inputs.working_directory }}
 
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
