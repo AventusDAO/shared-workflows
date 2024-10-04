@@ -11,6 +11,10 @@ on:
         required: false
         type: boolean
         default: true
+      artifact_name:
+        required: false
+        type: string
+        default: ""
       aws_region:
         required: true
         type: string
@@ -61,6 +65,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 10
     steps:
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -71,6 +76,12 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key }}
           aws-secret-access-key: ${{ secrets.aws_secret_key }}
           aws-region: ${{ inputs.aws_region }}
+
+      - name: Download Artifacts
+        if: ${{ inputs.artifact_name != "" }}
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ inputs.artifact_name }}
 
       - name: Login to the AWS registry
         run: |
