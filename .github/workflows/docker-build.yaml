@@ -14,7 +14,7 @@ on:
       artifact_name:
         required: false
         type: string
-        default: ""
+        default: ''
       aws_region:
         required: true
         type: string
@@ -78,7 +78,7 @@ jobs:
           aws-region: ${{ inputs.aws_region }}
 
       - name: Download Artifacts
-        if: ${{ inputs.artifact_name != "" }}
+        if: ${{ inputs.artifact_name != '' }}
         uses: actions/download-artifact@v4
         with:
           path: ${{ inputs.artifact_name }}
