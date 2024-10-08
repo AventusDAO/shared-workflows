@@ -25,6 +25,10 @@ on:
         required: false
         type: string
         default: .
+      docker_file_path:
+        required: false
+        type: string
+        default: {context}/Dockerfile
       ecr_repository_name:
         required: true
         type: string
@@ -127,6 +131,7 @@ jobs:
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
+          file: ${{ inputs.docker_file_path }}
           build-args: ${{ inputs.docker_args_list }}
 
       - name: Fail if no DOCKER_TAGS are specified
