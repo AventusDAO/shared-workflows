@@ -28,7 +28,7 @@ on:
       docker_file_path:
         required: false
         type: string
-        default: {context}/Dockerfile
+        default: ./Dockerfile
       ecr_repository_name:
         required: true
         type: string
