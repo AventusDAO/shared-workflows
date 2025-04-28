@@ -1,4 +1,4 @@
-name: reusable - Terraform
+name: Reusable - Terraform Deploy
 
 on:
   workflow_call:

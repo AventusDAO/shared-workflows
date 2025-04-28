@@ -1,4 +1,4 @@
-name: reusable - run check
+name: Reusable - Terraform Check
 
 on:
     workflow_call:
@@ -8,14 +8,10 @@ on:
           type: string
           description: 'Agent where the workflow will be run'
           default: ubuntu-latest
-        environment:
-          required: true
-          type: string
-          description: 'Environment name'
 
 jobs:
     precommit-check:
-        name: Check out code to ${{ inputs.environment }} environment
+        name: Check out code
         runs-on: ${{inputs.agent}}
         steps:
             - name: Check out code
