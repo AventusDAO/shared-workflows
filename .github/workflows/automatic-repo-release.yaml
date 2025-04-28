@@ -10,4 +10,6 @@ jobs:
     uses: Aventus-Network-Services/shared-workflows/.github/workflows/automatic-releases.yaml@v5.7.0
     with:
       default_bump: minor
-    secrets: inherit
+    secrets:
+      envPat: ${{ secrets.GITHUB_TOKEN }}
+
