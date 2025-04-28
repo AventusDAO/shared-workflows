@@ -7,7 +7,7 @@ on:
 
 jobs:
   github-release:
-    uses: Aventus-Network-Services/Infra-scripts/.github/workflows/automatic-releases.yaml@v5.7.0
+    uses: Aventus-Network-Services/shared-workflows/.github/workflows/automatic-releases.yaml@v5.7.0
     with:
       default_bump: minor
     secrets: inherit
