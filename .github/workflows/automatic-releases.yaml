@@ -1,8 +1,13 @@
-name: Automatic Release
+name: Reusable - Automatic Release
 
 on:
   workflow_call:
     inputs:
+      agent:
+        required: false
+        type: string
+        description: 'Agent where the workflow will be run'
+        default: ubuntu-latest
       default_bump:
         required: false
         type: string
@@ -14,7 +19,7 @@ on:
 jobs:
   tag:
     name: Bump version
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.agent }}
     if: "!contains(github.event.head_commit.message, 'Initial commit')"
 
     steps:
@@ -33,7 +38,7 @@ jobs:
           DEFAULT_BUMP: ${{ inputs.default_bump }}
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.new_tag }}
           draft: false

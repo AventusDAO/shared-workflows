@@ -1,0 +1,28 @@
+name: reusable - Terraform Docs
+
+on:
+  workflow_call:
+    inputs:
+      agent:
+        required: false
+        type: string
+        description: 'Agent where the workflow will be run'
+        default: ubuntu-latest
+
+jobs:
+  precommit-check:
+    name: Check out code
+    runs-on: ${{inputs.agent}}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Render terraform docs and push changes back to PR
+        uses: terraform-docs/gh-actions@v1
+        with:
+          working-dir: .
+          output-file: README.md
+          output-method: replace
+          git-push: true
+          git-commit-message: "create terraform-docs"
+          template: "<!-- BEGIN_TF_DOCS -->\n{{ .Content }}\n<!-- END_TF_DOCS -->\n"

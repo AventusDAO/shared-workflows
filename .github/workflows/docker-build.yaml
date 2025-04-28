@@ -1,4 +1,4 @@
-name: Docker Build
+name: Reusable - Docker Build
 
 on:
   workflow_call:
@@ -6,7 +6,7 @@ on:
       runner:
         required: false
         type: string
-        default: ubuntu-20.04
+        default: gh-ubuntu-2404-x64
       config_creds:
         required: false
         type: boolean
