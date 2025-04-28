@@ -1,0 +1,36 @@
+name: reusable - run check
+
+on:
+    workflow_call:
+      inputs:
+        agent:
+          required: false
+          type: string
+          description: 'Agent where the workflow will be run'
+          default: ubuntu-latest
+        environment:
+          required: true
+          type: string
+          description: 'Environment name'
+
+jobs:
+    precommit-check:
+        name: Check out code to ${{ inputs.environment }} environment
+        runs-on: ${{inputs.agent}}
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v4
+
+            - uses: hashicorp/setup-terraform@v3
+
+            - name: Install `pre-commit`
+              run: pip install pre-commit
+
+            - name: Install TFLint
+              run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+            - name: Install `pre-commit` hooks
+              run: pre-commit install
+
+            - name: Run `pre-commit`` checks
+              run: pre-commit run --all-files

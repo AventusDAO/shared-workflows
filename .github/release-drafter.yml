@@ -1,0 +1,69 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  # What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: 'Breaking'
+    labels:
+      - 'breaking'
+      - 'release'
+  - title: 'New'
+    labels:
+      - 'feature'
+      - 'refactor'
+      - 'test'
+  - title: 'Bug Fixes'
+    labels:
+      - 'fix'
+      - 'revert'
+  - title: 'Documentation'
+    label: 'docs'
+  - title: 'Other changes'
+
+version-resolver:
+  major:
+    labels:
+      - 'release'
+      - 'breaking'
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/feat:/'
+  - label: 'fix'
+    title:
+      - '/fix:/'
+  - label: 'docs'
+    title:
+      - '/docs:/'
+  - label: 'refactor'
+    title:
+      - '/refactor:/'
+  - label: 'test'
+    title:
+      - '/test:/'
+  - label: 'build'
+    title:
+      - '/build:/'
+  - label: 'ci'
+    title:
+      - '/ci:/'
+  - label: 'chore'
+    title:
+      - '/chore:/'
+  - label: 'revert'
+    title:
+      - '/revert:/'
