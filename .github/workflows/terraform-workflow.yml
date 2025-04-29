@@ -27,6 +27,11 @@ on:
             type: string
             description: 'AWS region where resources will be deployed'
             default: 'eu-west-1'
+        setup_ssh:
+            required: false
+            type: boolean
+            description: 'Whether to setup SSH for the workflow'
+            default: false
     secrets:
         AWS_ACCESS_KEY_ID:
             required: true
@@ -63,7 +68,7 @@ jobs:
             python-version: ${{inputs.phyton_version}}
 
         - name: Setup ci-agent SSH
-          if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
+          if: ${{ inputs.setup_ssh }}
           uses: MrSquaare/ssh-setup-action@v3
           with:
             host: github.com
