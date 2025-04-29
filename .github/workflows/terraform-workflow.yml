@@ -59,6 +59,12 @@ jobs:
           with:
             python-version: ${{inputs.phyton_version}}
 
+        - name: Setup ci-agent SSH
+          uses: MrSquaare/ssh-setup-action@v3
+          with:
+            host: github.com
+            private-key: ${{ secrets.CI_PRIVATE_SSH }}
+
         - name: Setup Terraform
           uses: hashicorp/setup-terraform@v3
 
