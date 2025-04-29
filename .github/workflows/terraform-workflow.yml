@@ -23,7 +23,7 @@ on:
             description: 'Target branch where changes should be applied'
             default: 'main'
         aws_region:
-            required: true
+            required: false
             type: string
             description: 'AWS region where resources will be deployed'
             default: 'eu-west-1'
