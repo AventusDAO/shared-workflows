@@ -63,7 +63,7 @@ jobs:
             python-version: ${{inputs.phyton_version}}
 
         - name: Setup ci-agent SSH
-          if: ${{ secrets.SSH_PRIVATE_KEY }}
+          if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
           uses: MrSquaare/ssh-setup-action@v3
           with:
             host: github.com
