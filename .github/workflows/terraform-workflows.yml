@@ -1,0 +1,6 @@
+  - name: Setup ci-agent SSH
+    if: ${{ github.event_name == 'workflow_call' && secrets.SSH_PRIVATE_KEY != '' }}
+    uses: MrSquaare/ssh-setup-action@v3
+    with:
+      host: github.com
+      private-key: ${{ secrets.SSH_PRIVATE_KEY }} 
