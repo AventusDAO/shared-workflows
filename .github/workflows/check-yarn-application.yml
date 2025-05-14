@@ -1,0 +1,54 @@
+name: Reusable - Check App
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
+      node_version:
+        required: false
+        type: string
+        default: "18.6"
+      cache: 
+        required: false
+        type: string
+        default: yarn
+      install_dependencies: 
+        required: false
+        type: boolean
+        default: true
+      build_packages: 
+        required: false
+        type: boolean
+        default: true
+      build_command: 
+        required: false
+        type: string
+        default: ''
+      run_checks: 
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  check_app:
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.cache }}
+      - name: Install dependencies
+        if: ${{ inputs.install_dependencies }}
+        run: yarn
+      - name: Build packages
+        if: ${{ inputs.build_packages }}
+        run: |
+          ${{ inputs.build_command }}
+      - name: Run typescript checks
+        if: ${{ inputs.run_checks }}
+        run: yarn types:check
