@@ -31,10 +31,17 @@ on:
         required: false
         type: boolean
         default: true
+      working_directory:
+        required: false
+        type: string
+        default: '.'
 
 jobs:
   check_app:
     runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
 
     steps:
       - uses: actions/checkout@v3
