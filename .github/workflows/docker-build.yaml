@@ -86,7 +86,7 @@ jobs:
 
       - name: Set ECR repository URL
         run: |
-          echo "ECR_REPO=${{ steps.login-ecr.outputs.registry-url }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
+          echo "ECR_REPO=${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
 
       - name: Download Artifacts
         if: ${{ inputs.artifact_name != '' }}
