@@ -85,6 +85,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_key }}
           aws-region: ${{ inputs.aws_region }}
 
+      - name: Configure AWS credentials - Role
+        if: ${{ !inputs.config_creds }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ inputs.aws_region }}
+
       - name: Login to Amazon ECR for private ECRs
         if: ${{ inputs.ecr_registry_type == 'private' }}
         id: login-ecr
