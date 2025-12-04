@@ -100,17 +100,15 @@ jobs:
         with:
           registry-type: public
 
-      - name: Set ECR repository URL
+      - name: Set Private ECR repository URL
+        if: ${{ inputs.ecr_registry_type == 'private' }}
         run: |
           echo "ECR_REPO=${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
 
-      - name: Set ECR repository URL
+      - name: Set Public ECR repository URL
+        if: ${{ inputs.ecr_registry_type == 'public' }}
         run: |
-          if [ "${{ inputs.ecr_registry_type }}" = "private" ]; then
-            echo "ECR_REPO=${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
-          else
-            echo "ECR_REPO=${{ steps.login-ecr-public.outputs.registry }}/${{ inputs.ecr_public_alias }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
-          fi
+          echo "ECR_REPO=${{ steps.login-ecr-public.outputs.registry }}/${{ inputs.ecr_public_alias }}/${{ inputs.ecr_repository_name }}" >> $GITHUB_ENV
 
       - name: Download Artifacts
         if: ${{ inputs.artifact_name != '' }}
