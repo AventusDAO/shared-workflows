@@ -3,165 +3,177 @@ name: Reusable - Terraform Deploy
 on:
   workflow_call:
     inputs:
-        agent:
-            required: false
-            type: string
-            description: 'Agent where the workflow will be run'
-            default: ubuntu-latest
-        phyton_version:
-            required: false
-            type: string
-            description: 'Version phyton to download'
-        auto_apply:
-            required: false
-            type: boolean
-            description: 'Whether to automatically apply changes'
-            default: false
-        target_branch:
-            required: false
-            type: string
-            description: 'Target branch where changes should be applied'
-            default: 'main'
-        aws_region:
-            required: false
-            type: string
-            description: 'AWS region where resources will be deployed'
-            default: 'eu-west-1'
-        setup_ssh:
-            required: false
-            type: boolean
-            description: 'Whether to setup SSH for the workflow'
-            default: false
+      agent:
+        required: false
+        type: string
+        description: "Agent where the workflow will be run"
+        default: ubuntu-latest
+      checkout_repository:
+        required: false
+        type: string
+        description: "Repository to checkout (owner/repo format). If empty, uses the current repository"
+        default: ""
+      checkout_ref:
+        required: false
+        type: string
+        description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
+        default: ""
+      phyton_version:
+        required: false
+        type: string
+        description: "Version phyton to download"
+      auto_apply:
+        required: false
+        type: boolean
+        description: "Whether to automatically apply changes"
+        default: false
+      target_branch:
+        required: false
+        type: string
+        description: "Target branch where changes should be applied"
+        default: "main"
+      aws_region:
+        required: false
+        type: string
+        description: "AWS region where resources will be deployed"
+        default: "eu-west-1"
+      setup_ssh:
+        required: false
+        type: boolean
+        description: "Whether to setup SSH for the workflow"
+        default: false
     secrets:
-        AWS_ACCESS_KEY_ID:
-            required: true
-            description: 'AWS access key ID for authentication'
-        AWS_SECRET_ACCESS_KEY:
-            required: true
-            description: 'AWS secret access key for authentication'
-        GH_TOKEN:
-            required: true
-            description: 'GitHub token for API access'
-        SSH_PRIVATE_KEY:
-            required: false
-            description: 'SSH private key for authentication'
+      AWS_ACCESS_KEY_ID:
+        required: true
+        description: "AWS access key ID for authentication"
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+        description: "AWS secret access key for authentication"
+      GH_TOKEN:
+        required: true
+        description: "GitHub token for API access"
+      SSH_PRIVATE_KEY:
+        required: false
+        description: "SSH private key for authentication"
 
 env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
-    GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
 jobs:
-    terraform:
-      runs-on: ${{inputs.agent}}
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+  terraform:
+    runs-on: ${{inputs.agent}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.checkout_ref }}
+          repository: ${{ inputs.checkout_repository }}
 
-        - name: Setup Python
-          if: ${{ inputs.phyton_version }}
-          uses: actions/setup-python@v4
-          with:
-            python-version: ${{inputs.phyton_version}}
+      - name: Setup Python
+        if: ${{ inputs.phyton_version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{inputs.phyton_version}}
 
-        - name: Setup ci-agent SSH
-          if: ${{ inputs.setup_ssh }}
-          uses: MrSquaare/ssh-setup-action@v3
-          with:
-            host: github.com
-            private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Setup ci-agent SSH
+        if: ${{ inputs.setup_ssh }}
+        uses: MrSquaare/ssh-setup-action@v3
+        with:
+          host: github.com
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-        - name: Setup Terraform
-          uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-        - name: Terraform Init
-          id: init
-          run: terraform init
+      - name: Terraform Init
+        id: init
+        run: terraform init
 
-        - name: Terraform Validate
-          id: validate
-          if: github.event_name == 'pull_request'
-          run: terraform validate -no-color
+      - name: Terraform Validate
+        id: validate
+        if: github.event_name == 'pull_request'
+        run: terraform validate -no-color
 
-        - name: Terraform Plan
-          if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-          continue-on-error: true
-          run: terraform plan -out plan.txt
+      - name: Terraform Plan
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        continue-on-error: true
+        run: terraform plan -out plan.txt
 
-        - name: Terraform Plan Show
-          id: plan
-          if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-          continue-on-error: true
-          run: terraform show -no-color plan.txt
+      - name: Terraform Plan Show
+        id: plan
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        continue-on-error: true
+        run: terraform show -no-color plan.txt
 
-        - name: PR comment on success
-          uses: actions/github-script@v7
-          if: github.event_name == 'pull_request' && steps.plan.outcome != 'failure'
-          env:
-            PLAN: "${{ steps.plan.outputs.stdout }}"
-          with:
-            github-token: ${{ secrets.GITHUB_TOKEN }}
-            script: |
-              // 1. Retrieve existing bot comments for the PR
-              const { data: comments } = await github.rest.issues.listComments({
+      - name: PR comment on success
+        uses: actions/github-script@v8
+        if: github.event_name == 'pull_request' && steps.plan.outcome != 'failure'
+        env:
+          PLAN: "${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const botComment = comments.find(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('Terraform Format and Style')
+            })
+
+            // 2. Prepare format of the comment
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            <details><summary>Validation Output</summary>
+
+            \`\`\`\n
+            ${{ steps.validate.outputs.stdout }}
+            \`\`\`
+
+            </details>
+
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            // 3. If we have a comment, update it, otherwise create a new one
+            if (botComment) {
+              github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output
+              })
+            } else {
+              github.rest.issues.createComment({
                 issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
               })
-              const botComment = comments.find(comment => {
-                return comment.user.type === 'Bot' && comment.body.includes('Terraform Format and Style')
-              })
+            }
 
-              // 2. Prepare format of the comment
-              const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-              #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-              #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-              <details><summary>Validation Output</summary>
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
 
-              \`\`\`\n
-              ${{ steps.validate.outputs.stdout }}
-              \`\`\`
-
-              </details>
-
-              #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-
-              <details><summary>Show Plan</summary>
-
-              \`\`\`\n
-              ${process.env.PLAN}
-              \`\`\`
-
-              </details>
-
-              *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
-
-              // 3. If we have a comment, update it, otherwise create a new one
-              if (botComment) {
-                github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: botComment.id,
-                  body: output
-                })
-              } else {
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: output
-                })
-              }
-
-        - name: Terraform Plan Status
-          if: steps.plan.outcome == 'failure'
-          run: exit 1
-
-        - name: Terraform Apply
-          if: ${{ inputs.auto_apply && github.ref == format('refs/heads/{0}', inputs.target_branch) }}
-          run: terraform apply -auto-approve
-          env:
-            TF_IN_AUTOMATION: true
+      - name: Terraform Apply
+        if: ${{ inputs.auto_apply && github.ref == format('refs/heads/{0}', inputs.target_branch) }}
+        run: terraform apply -auto-approve
+        env:
+          TF_IN_AUTOMATION: true
