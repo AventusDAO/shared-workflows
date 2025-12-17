@@ -13,11 +13,11 @@ on:
         type: string
         description: "Repository to checkout (owner/repo format). If empty, uses the current repository"
         default: ""
-    checkout_ref:
-      required: false
-      type: string
-      description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
-      default: ""
+      checkout_ref:
+        required: false
+        type: string
+        description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
+        default: ""
 
 jobs:
   precommit-check:
