@@ -18,6 +18,11 @@ on:
         type: string
         description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
         default: ""
+      checkout_depth:
+        required: false
+        type: number
+        description: "Depth of checkout. If empty, uses the default depth"
+        default: 0
 
 jobs:
   precommit-check:

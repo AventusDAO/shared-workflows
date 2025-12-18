@@ -3,49 +3,70 @@ name: Reusable - Check App
 on:
   workflow_call:
     inputs:
-      runner:
+      agent:
         required: false
         type: string
+        description: "Agent where the workflow will be run"
         default: ubuntu-latest
+      checkout_repository:
+        required: false
+        type: string
+        description: "Repository to checkout (owner/repo format). If empty, uses the current repository"
+        default: ""
+      checkout_ref:
+        required: false
+        type: string
+        description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
+        default: ""
+      checkout_depth:
+        required: false
+        type: number
+        description: "Depth of checkout. If empty, uses the default depth"
+        default: 0
       node_version:
         required: false
         type: string
         default: "18.6"
-      cache: 
+      cache:
         required: false
         type: string
         default: yarn
-      install_dependencies: 
+      install_dependencies:
         required: false
         type: boolean
         default: true
-      build_packages: 
+      build_packages:
         required: false
         type: boolean
         default: true
-      build_command: 
+      build_command:
         required: false
         type: string
-        default: ''
-      run_checks: 
+        default: ""
+      run_checks:
         required: false
         type: boolean
         default: true
       working_directory:
         required: false
         type: string
-        default: '.'
+        default: "."
 
 jobs:
   check_app:
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.agent }}
     defaults:
       run:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: ${{ inputs.checkout_depth }}
+          ref: ${{ inputs.checkout_ref }}
+          repository: ${{ inputs.checkout_repository }}
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node_version }}
           cache: ${{ inputs.cache }}

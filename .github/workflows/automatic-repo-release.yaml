@@ -7,9 +7,8 @@ on:
 
 jobs:
   github-release:
-    uses: AventusDAO/shared-workflows/.github/workflows/automatic-releases.yaml@v5.7.0
+    uses: AventusDAO/shared-workflows/.github/workflows/automatic-releases.yaml@v5.19.0
     with:
       default_bump: minor
     secrets:
       envPat: ${{ secrets.GITHUB_TOKEN }}
-

@@ -11,10 +11,25 @@ on:
         required: false
         type: string
         default: "aventus"
-      runner:
+      agent:
         required: false
         type: string
         default: arc-ubuntu-2404-x64
+      checkout_repository:
+        required: false
+        type: string
+        description: "Repository to checkout (owner/repo format). If empty, uses the current repository"
+        default: ""
+      checkout_ref:
+        required: false
+        type: string
+        description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
+        default: ""
+      checkout_depth:
+        required: false
+        type: number
+        description: "Depth of checkout. If empty, uses the default depth"
+        default: 0
       config_creds:
         required: false
         type: boolean
@@ -71,15 +86,22 @@ on:
 
 jobs:
   docker-build:
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.agent }}
     timeout-minutes: 10
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: ${{ inputs.checkout_depth }}
+          ref: ${{ inputs.checkout_ref }}
+          repository: ${{ inputs.checkout_repository }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials
         if: ${{ inputs.config_creds }}
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.aws_access_key }}
           aws-secret-access-key: ${{ secrets.aws_secret_key }}
@@ -87,7 +109,7 @@ jobs:
 
       - name: Configure AWS credentials - Role
         if: ${{ !inputs.config_creds }}
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: ${{ inputs.aws_region }}
 
@@ -119,7 +141,7 @@ jobs:
 
       - name: Download Artifacts
         if: ${{ inputs.artifact_name != '' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ inputs.artifact_name }}
 
@@ -157,7 +179,7 @@ jobs:
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: "{{defaultContext}}:${{ inputs.git_context }}"
           push: true
