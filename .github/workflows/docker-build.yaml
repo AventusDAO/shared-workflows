@@ -44,10 +44,10 @@ on:
       aws_account_id:
         required: true
         type: string
-      git_context:
+      context:
         required: false
         type: string
-        default: .
+        default: "."
       docker_file_path:
         required: false
         type: string
@@ -181,7 +181,7 @@ jobs:
         if: ${{ env.DOCKER_TAG != '' }}
         uses: docker/build-push-action@v6
         with:
-          context: "{{defaultContext}}:${{ inputs.git_context }}"
+          context: ${{ inputs.context }}
           push: true
           tags: ${{ env.DOCKER_TAG }}
           provenance: false
