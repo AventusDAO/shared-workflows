@@ -202,44 +202,58 @@ jobs:
             const sevRank = { critical:5, high:4, moderate:3, low:2, info:1 };
             vulns.sort((a,b)=> (sevRank[b.severity]||0) - (sevRank[a.severity]||0) || a.name.localeCompare(b.name));
 
-            for (const v of vulns) {
-              md.push(`#### ${v.name} — ${String(v.severity).toUpperCase()}`);
-              if (v.range) md.push(`- Vulnerable range: \`${v.range}\``);
+            // Create table header
+            md.push(`| Package | Severity | Vulnerable Range | Advisories | Fix Available |`);
+            md.push(`|---------|----------|------------------|------------|---------------|`);
 
-              // "via" can contain strings or advisory objects
+            for (const v of vulns) {
+              // Package name
+              const packageName = `\`${v.name}\``;
+              
+              // Severity with emoji
+              const severityEmoji = { critical: '🔴', high: '🟠', moderate: '🟡', low: '🟢', info: '🔵' };
+              const severity = `${severityEmoji[v.severity] || ''} ${String(v.severity).toUpperCase()}`;
+              
+              // Vulnerable range
+              const range = v.range ? `\`${v.range}\`` : '-';
+              
+              // Advisories
               const advisories = (v.via || []).filter(x => typeof x === 'object');
               const viaStrings = (v.via || []).filter(x => typeof x === 'string');
-
-              if (viaStrings.length) md.push(`- Via: ${viaStrings.map(s=>`\`${s}\``).join(', ')}`);
-
-              if (advisories.length) {
-                // Print up to a few advisory lines to keep summary readable
-                for (const a of advisories.slice(0, 5)) {
-                  md.push(`- ${a.title || 'Advisory'}${a.url ? ` - [View advisory](${a.url})` : ''}`);
-                  if (a.cwe?.length) md.push(`  - CWE: ${a.cwe.join(', ')}`);
-                  if (a.cvss?.score != null) md.push(`  - CVSS: ${a.cvss.score}`);
+              let advisoryLinks = [];
+              if (advisories.length > 0) {
+                advisoryLinks = advisories.slice(0, 3).map(a => {
+                  const title = (a.title || 'Advisory').substring(0, 50);
+                  return a.url ? `[${title}](${a.url})` : title;
+                });
+                if (advisories.length > 3) {
+                  advisoryLinks.push(`+${advisories.length - 3} more`);
                 }
-                if (advisories.length > 5) md.push(`- …and ${advisories.length - 5} more advisories`);
               }
-
-              if (Array.isArray(v.nodes) && v.nodes.length) {
-                md.push(`- Nodes: ${v.nodes.slice(0,10).map(n=>`\`${n}\``).join(', ')}${v.nodes.length>10 ? ' …' : ''}`);
+              if (viaStrings.length > 0) {
+                viaStrings.forEach(s => {
+                  if (!advisoryLinks.some(a => a.includes(s))) {
+                    advisoryLinks.push(`via \`${s}\``);
+                  }
+                });
               }
-              if (Array.isArray(v.effects) && v.effects.length) {
-                md.push(`- Affects: ${v.effects.map(e=>`\`${e}\``).join(', ')}`);
-              }
+              const advisoryCell = advisoryLinks.length > 0 ? advisoryLinks.join('<br>') : '-';
+              
+              // Fix available
+              let fixCell = '❌';
               if (v.fixAvailable) {
-                if (v.fixAvailable === true) md.push(`- Fix available: ✅`);
-                else if (v.fixAvailable.isSemVerMajor) {
-                  md.push(`- Fix available: ✅ \`npm audit fix --force\` ⚠️ **Breaking change**`);
+                if (v.fixAvailable === true) {
+                  fixCell = '✅ \`npm audit fix\`';
+                } else if (v.fixAvailable.isSemVerMajor) {
+                  fixCell = '✅ \`npm audit fix --force\`<br>⚠️ **Breaking change**';
                 } else {
-                  md.push(`- Fix available: ✅ \`npm audit fix\``);
+                  fixCell = '✅ \`npm audit fix\`';
                 }
-              } else {
-                md.push(`- Fix available: ❌`);
               }
-              md.push('');
+              
+              md.push(`| ${packageName} | ${severity} | ${range} | ${advisoryCell} | ${fixCell} |`);
             }
+            md.push('');
           }
 
           // Details (v6)
@@ -250,14 +264,21 @@ jobs:
             const sevRank = { critical:5, high:4, moderate:3, low:2 };
             adv.sort((a,b)=> (sevRank[b.severity]||0) - (sevRank[a.severity]||0) || a.module_name.localeCompare(b.module_name));
 
+            // Create table header
+            md.push(`| Package | Severity | Vulnerable Versions | Patched Versions | Advisory |`);
+            md.push(`|---------|----------|---------------------|------------------|----------|`);
+
             for (const a of adv) {
-              md.push(`#### ${a.module_name} — ${String(a.severity).toUpperCase()}`);
-              md.push(`- Title: ${a.title}`);
-              md.push(`- Vulnerable: \`${a.vulnerable_versions}\``);
-              md.push(`- Patched: \`${a.patched_versions || 'n/a'}\``);
-              if (a.url) md.push(`- Advisory: [${a.url}](${a.url})`);
-              md.push('');
+              const packageName = `\`${a.module_name}\``;
+              const severityEmoji = { critical: '🔴', high: '🟠', moderate: '🟡', low: '🟢', info: '🔵' };
+              const severity = `${severityEmoji[a.severity] || ''} ${String(a.severity).toUpperCase()}`;
+              const vulnerable = `\`${a.vulnerable_versions}\``;
+              const patched = a.patched_versions ? `\`${a.patched_versions}\`` : 'n/a';
+              const advisory = a.url ? `[View](${a.url})` : a.title || '-';
+              
+              md.push(`| ${packageName} | ${severity} | ${vulnerable} | ${patched} | ${advisory} |`);
             }
+            md.push('');
           }
 
           // Add fix instructions if vulnerabilities found
