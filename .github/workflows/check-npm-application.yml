@@ -119,7 +119,6 @@ jobs:
       - name: Convert npm audit JSON to Markdown
         if: ${{ inputs.run_audit && steps.npm-audit-json.outcome != 'skipped' }}
         id: npm-audit
-        continue-on-error: true
         run: |
           REPORT_FILE=$(mktemp)
 
@@ -316,10 +315,23 @@ jobs:
           # Cleanup
           rm -f audit.json
 
-          # Exit with appropriate code
-          if [ "${{ steps.npm-audit-json.outputs.exit_code }}" != "0" ]; then
-            exit ${{ steps.npm-audit-json.outputs.exit_code }}
+      - name: Fail on critical or high vulnerabilities
+        if: ${{ inputs.run_audit && steps.npm-audit.outcome != 'skipped' }}
+        run: |
+          CRITICAL="${{ steps.npm-audit.outputs.critical_count || '0' }}"
+          HIGH="${{ steps.npm-audit.outputs.high_count || '0' }}"
+
+          # Check if critical or high vulnerabilities exist
+          if [ "$CRITICAL" != "0" ] || [ "$HIGH" != "0" ]; then
+            echo "❌ Critical or high vulnerabilities found!"
+            echo "Critical: $CRITICAL"
+            echo "High: $HIGH"
+            echo ""
+            echo "Please review the audit report and fix the vulnerabilities before merging."
+            exit 1
           fi
+
+          echo "✅ No critical or high vulnerabilities found."
 
       - name: Create or update PR comment with audit results
         if: ${{ inputs.run_audit && github.event_name == 'pull_request' && steps.npm-audit.outcome != 'skipped' }}
