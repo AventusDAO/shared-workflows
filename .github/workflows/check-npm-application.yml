@@ -1,0 +1,349 @@
+name: Reusable - Check NPM App
+
+on:
+  workflow_call:
+    inputs:
+      agent:
+        required: false
+        type: string
+        description: "Agent where the workflow will be run"
+        default: ubuntu-latest
+      checkout_repository:
+        required: false
+        type: string
+        description: "Repository to checkout (owner/repo format). If empty, uses the current repository"
+        default: ""
+      checkout_ref:
+        required: false
+        type: string
+        description: "Git ref to checkout (branch, tag, or commit SHA). If empty, uses the default branch"
+        default: ""
+      checkout_depth:
+        required: false
+        type: number
+        description: "Depth of checkout. If empty, uses the default depth"
+        default: 0
+      node_version:
+        required: false
+        type: string
+        default: "24"
+      cache:
+        required: false
+        type: string
+        description: "Cache type (npm, yarn, or empty string to disable). Defaults to npm if package-lock.json exists"
+        default: "npm"
+      install_dependencies:
+        required: false
+        type: boolean
+        default: true
+      build_packages:
+        required: false
+        type: boolean
+        default: true
+      build_command:
+        required: false
+        type: string
+        default: ""
+      run_checks:
+        required: false
+        type: boolean
+        default: true
+      run_lint:
+        required: false
+        type: boolean
+        default: true
+      lint_command:
+        required: false
+        type: string
+        default: "npm run lint"
+      run_audit:
+        required: false
+        type: boolean
+        default: true
+      audit_level:
+        required: false
+        type: string
+        description: "The value of --audit-level flag"
+        default: "moderate"
+      fail_on_critical_high:
+        required: false
+        type: boolean
+        description: "Whether to fail the workflow on critical or high vulnerabilities"
+        default: true
+      working_directory:
+        required: false
+        type: string
+        default: "."
+
+jobs:
+  check:
+    runs-on: ${{ inputs.agent }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: ${{ inputs.checkout_depth }}
+          ref: ${{ inputs.checkout_ref }}
+          repository: ${{ inputs.checkout_repository }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.cache }}
+          cache-dependency-path: ${{ inputs.working_directory != '.' && format('{0}/package-lock.json', inputs.working_directory) || '' }}
+
+      - name: Install dependencies
+        if: ${{ inputs.install_dependencies }}
+        run: npm ci
+
+      - name: Build packages
+        if: ${{ inputs.build_packages }}
+        run: |
+          ${{ inputs.build_command }}
+
+      - name: Run linting
+        if: ${{ inputs.run_lint }}
+        run: ${{ inputs.lint_command }}
+
+      - name: Run typescript checks
+        if: ${{ inputs.run_checks }}
+        run: npm run types:check
+
+      - name: Run npm audit (JSON)
+        if: ${{ inputs.run_audit }}
+        id: npm-audit-json
+        continue-on-error: true
+        run: |
+          npm audit --audit-level=${{ inputs.audit_level }} --json > audit.json 2>&1 || AUDIT_EXIT_CODE=$?
+          echo "exit_code=${AUDIT_EXIT_CODE:-0}" >> $GITHUB_OUTPUT
+
+      - name: Convert npm audit JSON to Markdown
+        if: ${{ inputs.run_audit && steps.npm-audit-json.outcome != 'skipped' }}
+        id: npm-audit
+        run: |
+          REPORT_FILE=$(mktemp)
+
+          # Check if audit.json exists and is valid JSON
+          if [ ! -f audit.json ] || ! node -e "JSON.parse(require('fs').readFileSync('audit.json','utf8'))" 2>/dev/null; then
+            # Fallback to text output if JSON parsing fails
+            TEXT_OUTPUT=$(npm audit --audit-level=${{ inputs.audit_level }} 2>&1 || true)
+            {
+              echo "## ⚠️ npm audit error"
+              echo ""
+              echo "Failed to generate audit report:"
+              echo ""
+              echo '```'
+              echo "$TEXT_OUTPUT"
+              echo '```'
+            } > "$REPORT_FILE"
+            echo "has_vulnerabilities=false" >> $GITHUB_OUTPUT
+            echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+            cat "$REPORT_FILE" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Convert JSON to markdown
+          node <<'NODE' > "$REPORT_FILE"
+          const fs = require('node:fs');
+
+          const audit = JSON.parse(fs.readFileSync('audit.json','utf8'));
+
+          // Supports npm v6 ("advisories") and npm v7+ ("vulnerabilities" + auditReportVersion)
+          function summarize(a) {
+            // npm v7+ format
+            if (a.metadata?.vulnerabilities) {
+              return {
+                totalDependencies: a.metadata.totalDependencies ?? null,
+                counts: a.metadata.vulnerabilities
+              };
+            }
+            // npm v6 format
+            if (a.metadata && (a.advisories || a.actions)) {
+              // best-effort: v6 metadata sometimes differs; we'll derive counts from advisories
+              const adv = Object.values(a.advisories || {});
+              const counts = { info:0, low:0, moderate:0, high:0, critical:0 };
+              for (const x of adv) counts[x.severity] = (counts[x.severity] || 0) + 1;
+              return { totalDependencies: a.metadata.totalDependencies ?? null, counts };
+            }
+            // fallback
+            return { totalDependencies: null, counts: {} };
+          }
+
+          const { totalDependencies, counts } = summarize(audit);
+
+          const sevOrder = ['critical','high','moderate','low','info'];
+          const countOrZero = (k) => Number.isFinite(counts?.[k]) ? counts[k] : 0;
+
+          const totalVulns = sevOrder.reduce((s,k)=>s+countOrZero(k),0);
+
+          const md = [];
+          md.push(`## 📋 npm audit report`);
+          md.push('');
+          md.push(`Generated: **${new Date().toISOString()}**`);
+          md.push('');
+          md.push(`### Summary`);
+          if (totalDependencies != null) md.push(`- Total dependencies: **${totalDependencies}**`);
+          md.push(`- Total vulnerabilities: **${totalVulns}**`);
+          md.push('');
+          md.push(`| Severity | Count |`);
+          md.push(`|---|---:|`);
+          for (const k of sevOrder) md.push(`| ${k} | ${countOrZero(k)} |`);
+          md.push('');
+
+          // Details (v7+)
+          if (audit.vulnerabilities && typeof audit.vulnerabilities === 'object') {
+            md.push(`### Details`);
+            md.push('');
+            const vulns = Object.entries(audit.vulnerabilities)
+              .map(([name, v]) => ({ name, ...v }))
+              .filter(v => v.severity && v.via && v.via.length);
+
+            // Sort by severity then name
+            const sevRank = { critical:5, high:4, moderate:3, low:2, info:1 };
+            vulns.sort((a,b)=> (sevRank[b.severity]||0) - (sevRank[a.severity]||0) || a.name.localeCompare(b.name));
+
+            // Create table header
+            md.push(`| Package | Severity | Vulnerable Range | Advisories | Fix Available |`);
+            md.push(`|---------|----------|------------------|------------|---------------|`);
+
+            for (const v of vulns) {
+              // Package name
+              const packageName = `\`${v.name}\``;
+              
+              // Severity with emoji
+              const severityEmoji = { critical: '🔴', high: '🟠', moderate: '🟡', low: '🟢', info: '🔵' };
+              const severity = `${severityEmoji[v.severity] || ''} ${String(v.severity).toUpperCase()}`;
+              
+              // Vulnerable range
+              const range = v.range ? `\`${v.range}\`` : '-';
+              
+              // Advisories
+              const advisories = (v.via || []).filter(x => typeof x === 'object');
+              const viaStrings = (v.via || []).filter(x => typeof x === 'string');
+              let advisoryLinks = [];
+              if (advisories.length > 0) {
+                advisoryLinks = advisories.slice(0, 3).map(a => {
+                  const title = (a.title || 'Advisory').substring(0, 50);
+                  return a.url ? `[${title}](${a.url})` : title;
+                });
+                if (advisories.length > 3) {
+                  advisoryLinks.push(`+${advisories.length - 3} more`);
+                }
+              }
+              if (viaStrings.length > 0) {
+                viaStrings.forEach(s => {
+                  if (!advisoryLinks.some(a => a.includes(s))) {
+                    advisoryLinks.push(`via \`${s}\``);
+                  }
+                });
+              }
+              const advisoryCell = advisoryLinks.length > 0 ? advisoryLinks.join('<br>') : '-';
+              
+              // Fix available
+              let fixCell = '❌';
+              if (v.fixAvailable) {
+                if (v.fixAvailable === true) {
+                  fixCell = '✅ \`npm audit fix\`';
+                } else if (v.fixAvailable.isSemVerMajor) {
+                  fixCell = '✅ \`npm audit fix --force\`<br>⚠️ **Breaking change**';
+                } else {
+                  fixCell = '✅ \`npm audit fix\`';
+                }
+              }
+              
+              md.push(`| ${packageName} | ${severity} | ${range} | ${advisoryCell} | ${fixCell} |`);
+            }
+            md.push('');
+          }
+
+          // Details (v6)
+          else if (audit.advisories && typeof audit.advisories === 'object') {
+            md.push(`### Details`);
+            md.push('');
+            const adv = Object.values(audit.advisories);
+            const sevRank = { critical:5, high:4, moderate:3, low:2 };
+            adv.sort((a,b)=> (sevRank[b.severity]||0) - (sevRank[a.severity]||0) || a.module_name.localeCompare(b.module_name));
+
+            // Create table header
+            md.push(`| Package | Severity | Vulnerable Versions | Patched Versions | Advisory |`);
+            md.push(`|---------|----------|---------------------|------------------|----------|`);
+
+            for (const a of adv) {
+              const packageName = `\`${a.module_name}\``;
+              const severityEmoji = { critical: '🔴', high: '🟠', moderate: '🟡', low: '🟢', info: '🔵' };
+              const severity = `${severityEmoji[a.severity] || ''} ${String(a.severity).toUpperCase()}`;
+              const vulnerable = `\`${a.vulnerable_versions}\``;
+              const patched = a.patched_versions ? `\`${a.patched_versions}\`` : 'n/a';
+              const advisory = a.url ? `[View](${a.url})` : a.title || '-';
+              
+              md.push(`| ${packageName} | ${severity} | ${vulnerable} | ${patched} | ${advisory} |`);
+            }
+            md.push('');
+          }
+
+          // Add fix instructions if vulnerabilities found
+          if (totalVulns > 0) {
+            md.push(`> 💡 To fix these issues, run: \`npm audit fix\` or \`npm audit fix --force\` (for breaking changes)`);
+          } else {
+            md.push(`> ✅ No vulnerabilities found.`);
+          }
+
+          process.stdout.write(md.join('\n'));
+
+          // Emit vulnerability count for later steps
+          const critical = countOrZero('critical');
+          const high = countOrZero('high');
+          const moderate = countOrZero('moderate');
+          const low = countOrZero('low');
+          const info = countOrZero('info');
+          const hasVulns = totalVulns > 0;
+
+          const outputFile = process.env.GITHUB_OUTPUT || 'ghout.txt';
+          require('fs').appendFileSync(outputFile, `has_vulnerabilities=${hasVulns}\n`);
+          require('fs').appendFileSync(outputFile, `critical_count=${critical}\n`);
+          require('fs').appendFileSync(outputFile, `high_count=${high}\n`);
+          require('fs').appendFileSync(outputFile, `moderate_count=${moderate}\n`);
+          require('fs').appendFileSync(outputFile, `low_count=${low}\n`);
+          require('fs').appendFileSync(outputFile, `info_count=${info}\n`);
+          require('fs').appendFileSync(outputFile, `total_vulnerabilities=${totalVulns}\n`);
+          NODE
+
+          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+
+          # Add to workflow summary
+          cat "$REPORT_FILE" >> $GITHUB_STEP_SUMMARY
+
+          # Cleanup
+          rm -f audit.json
+
+      - name: Create or update PR comment with audit results
+        if: ${{ inputs.run_audit && github.event_name == 'pull_request' && steps.npm-audit.outcome != 'skipped' }}
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file-path: ${{ steps.npm-audit.outputs.report_file }}
+          comment-tag: npm-audit-report
+          mode: upsert
+          create-if-not-exists: ${{ steps.npm-audit.outputs.has_vulnerabilities || 'false' }}
+
+      - name: Fail on critical or high vulnerabilities
+        if: ${{ inputs.run_audit && inputs.fail_on_critical_high && steps.npm-audit.outcome != 'skipped' }}
+        run: |
+          CRITICAL="${{ steps.npm-audit.outputs.critical_count || '0' }}"
+          HIGH="${{ steps.npm-audit.outputs.high_count || '0' }}"
+
+          # Check if critical or high vulnerabilities exist
+          if [ "$CRITICAL" != "0" ] || [ "$HIGH" != "0" ]; then
+            echo "❌ Critical or high vulnerabilities found!"
+            echo "Critical: $CRITICAL"
+            echo "High: $HIGH"
+            echo ""
+            echo "Please review the audit report and fix the vulnerabilities before merging."
+            exit 1
+          fi
+
+          echo "✅ No critical or high vulnerabilities found."
