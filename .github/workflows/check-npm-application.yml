@@ -315,9 +315,18 @@ jobs:
           # Cleanup
           rm -f audit.json
 
+      - name: Create or update PR comment with audit results
+        if: ${{ inputs.run_audit && github.event_name == 'pull_request' && steps.npm-audit.outcome != 'skipped' }}
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file-path: ${{ steps.npm-audit.outputs.report_file }}
+          comment-tag: npm-audit-report
+          mode: upsert
+          create-if-not-exists: ${{ steps.npm-audit.outputs.has_vulnerabilities || 'false' }}
+
       - name: Fail on critical or high vulnerabilities
         if: ${{ inputs.run_audit && steps.npm-audit.outcome != 'skipped' }}
-        continue-on-error: true
         run: |
           CRITICAL="${{ steps.npm-audit.outputs.critical_count || '0' }}"
           HIGH="${{ steps.npm-audit.outputs.high_count || '0' }}"
@@ -333,13 +342,3 @@ jobs:
           fi
 
           echo "✅ No critical or high vulnerabilities found."
-
-      - name: Create or update PR comment with audit results
-        if: ${{ inputs.run_audit && github.event_name == 'pull_request' && steps.npm-audit.outcome != 'skipped' }}
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file-path: ${{ steps.npm-audit.outputs.report_file }}
-          comment-tag: npm-audit-report
-          mode: upsert
-          create-if-not-exists: ${{ steps.npm-audit.outputs.has_vulnerabilities || 'false' }}
