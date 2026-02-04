@@ -155,6 +155,7 @@ jobs:
         id: npm-audit
         env:
           PACKAGE_MANAGER: ${{ inputs.cache }}
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
         run: |
           REPORT_FILE=$(mktemp)
 
@@ -227,9 +228,14 @@ jobs:
 
           const pm = process.env.PACKAGE_MANAGER || 'npm';
           const pmName = pm === 'pnpm' ? 'pnpm' : pm === 'yarn' ? 'yarn' : 'npm';
+          const workDir = process.env.WORKING_DIRECTORY || '.';
 
           const md = [];
-          md.push(`## 📋 ${pmName} audit report`);
+          if (workDir !== '.') {
+            md.push(`## 📋 ${pmName} audit report - \`${workDir}\``);
+          } else {
+            md.push(`## 📋 ${pmName} audit report`);
+          }
           md.push('');
           md.push(`Generated: **${new Date().toISOString()}**`);
           md.push('');
