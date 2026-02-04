@@ -30,7 +30,8 @@ on:
       cache:
         required: false
         type: string
-        default: npm
+        description: "Cache type (npm, yarn, or empty string to disable). Defaults to npm if package-lock.json exists"
+        default: "npm"
       install_dependencies:
         required: false
         type: boolean
@@ -88,6 +89,7 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: ${{ inputs.cache }}
+          cache-dependency-path: ${{ inputs.working_directory != '.' && format('{0}/package-lock.json', inputs.working_directory) || '' }}
 
       - name: Install dependencies
         if: ${{ inputs.install_dependencies }}
