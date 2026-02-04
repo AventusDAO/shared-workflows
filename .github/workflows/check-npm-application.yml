@@ -108,12 +108,103 @@ jobs:
         if: ${{ inputs.run_checks }}
         run: npm run types:check
 
-      - name: Run npm audit
+      - name: Run npm audit and create markdown report
         if: ${{ inputs.run_audit }}
-        uses: oke-py/npm-audit-action@v3
+        id: npm-audit
+        continue-on-error: true
+        run: |
+          cd "${{ inputs.working_directory }}"
+
+          # Run npm audit and capture text output
+          AUDIT_OUTPUT=$(npm audit --audit-level=${{ inputs.audit_level }} 2>&1) || AUDIT_EXIT_CODE=$?
+
+          # Create markdown report file
+          REPORT_FILE=$(mktemp)
+
+          # Check if vulnerabilities were found
+          if echo "$AUDIT_OUTPUT" | grep -q "vulnerabilities"; then
+            # Format as markdown
+            {
+              echo "## 📋 npm audit report"
+              echo ""
+              echo "\`\`\`"
+              echo "$AUDIT_OUTPUT"
+              echo "\`\`\`"
+              echo ""
+              echo "> To fix these issues, run: \`npm audit fix\` or \`npm audit fix --force\` (for breaking changes)"
+            } > "$REPORT_FILE"
+          else
+            # No vulnerabilities found
+            {
+              echo "## ✅ npm audit report"
+              echo ""
+              echo "No vulnerabilities found."
+            } > "$REPORT_FILE"
+            AUDIT_EXIT_CODE=0
+          fi
+
+          # Read the report
+          MARKDOWN_REPORT=$(cat "$REPORT_FILE")
+
+          # Add to workflow summary
+          cat "$REPORT_FILE" >> $GITHUB_STEP_SUMMARY
+
+          # Store for PR comment (using multiline output)
+          {
+            echo "markdown_report<<AUDIT_EOF"
+            cat "$REPORT_FILE"
+            echo "AUDIT_EOF"
+          } >> $GITHUB_OUTPUT
+
+          # Cleanup
+          rm -f "$REPORT_FILE"
+
+          # Set exit code based on audit result
+          if [ -n "$AUDIT_EXIT_CODE" ] && [ "$AUDIT_EXIT_CODE" != "0" ]; then
+            echo "has_vulnerabilities=true" >> $GITHUB_OUTPUT
+            exit $AUDIT_EXIT_CODE
+          else
+            echo "has_vulnerabilities=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or update PR comment with audit results
+        if: ${{ inputs.run_audit && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
         with:
-          audit_level: ${{ inputs.audit_level }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          create_issues: false
-          create_pr_comments: true
-          working_directory: ${{ inputs.working_directory }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const report = `${{ steps.npm-audit.outputs.markdown_report }}`;
+
+            // Check if comment already exists
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('npm audit report')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: report
+              });
+            } else {
+              // Only create new comment if there are vulnerabilities
+              // (to avoid cluttering PRs with "no vulnerabilities" comments)
+              const hasVulnerabilities = '${{ steps.npm-audit.outputs.has_vulnerabilities }}' === 'true';
+              if (hasVulnerabilities) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: report
+                });
+              }
+            }
