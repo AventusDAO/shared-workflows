@@ -52,10 +52,6 @@ on:
         required: false
         type: boolean
         default: true
-      lint_command:
-        required: false
-        type: string
-        default: ""
       run_audit:
         required: false
         type: boolean
@@ -121,17 +117,13 @@ jobs:
       - name: Run linting
         if: ${{ inputs.run_lint }}
         run: |
-          if [ "${{ inputs.lint_command }}" != "" ]; then
-            ${{ inputs.lint_command }}
-          else
-            if [ "${{ inputs.cache }}" == "pnpm" ]; then
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
               pnpm run lint
             elif [ "${{ inputs.cache }}" == "yarn" ]; then
               yarn lint
             else
               npm run lint
             fi
-          fi
 
       - name: Run typescript checks
         if: ${{ inputs.run_checks }}
@@ -235,7 +227,7 @@ jobs:
 
           const pm = process.env.PACKAGE_MANAGER || 'npm';
           const pmName = pm === 'pnpm' ? 'pnpm' : pm === 'yarn' ? 'yarn' : 'npm';
-          
+
           const md = [];
           md.push(`## 📋 ${pmName} audit report`);
           md.push('');
@@ -406,7 +398,7 @@ jobs:
         run: |
           WORK_DIR="${{ inputs.working_directory }}"
           CACHE="${{ inputs.cache }}"
-          
+
           # Sanitize working directory for use in tag (replace / with -, remove leading/trailing dots and slashes)
           if [ "$WORK_DIR" != "." ]; then
             SANITIZED_DIR=$(echo "$WORK_DIR" | sed 's/\//-/g' | sed 's/^\.//g' | sed 's/\.$//g' | sed 's/^-\|-$//g')
@@ -414,7 +406,7 @@ jobs:
           else
             TAG="${CACHE}-audit-report"
           fi
-          
+
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Create or update PR comment with audit results
