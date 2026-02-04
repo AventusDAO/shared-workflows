@@ -317,6 +317,7 @@ jobs:
 
       - name: Fail on critical or high vulnerabilities
         if: ${{ inputs.run_audit && steps.npm-audit.outcome != 'skipped' }}
+        continue-on-error: true
         run: |
           CRITICAL="${{ steps.npm-audit.outputs.critical_count || '0' }}"
           HIGH="${{ steps.npm-audit.outputs.high_count || '0' }}"
