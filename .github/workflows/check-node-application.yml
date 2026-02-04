@@ -1,4 +1,4 @@
-name: Reusable - Check NPM App
+name: Reusable - Check Node App
 
 on:
   workflow_call:
@@ -30,8 +30,8 @@ on:
       cache:
         required: false
         type: string
-        description: "Cache type (npm, yarn, or empty string to disable). Defaults to npm if package-lock.json exists"
-        default: "npm"
+        description: "Cache type (npm, yarn, pnpm or empty string to disable). Defaults to npm if package-lock.json exists"
+        default: "pnpm"
       install_dependencies:
         required: false
         type: boolean
@@ -52,10 +52,6 @@ on:
         required: false
         type: boolean
         default: true
-      lint_command:
-        required: false
-        type: string
-        default: "npm run lint"
       run_audit:
         required: false
         type: boolean
@@ -90,15 +86,28 @@ jobs:
           ref: ${{ inputs.checkout_ref }}
           repository: ${{ inputs.checkout_repository }}
 
+      - name: Setup pnpm
+        if: ${{ inputs.cache == 'pnpm' }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node_version }}
           cache: ${{ inputs.cache }}
-          cache-dependency-path: ${{ inputs.working_directory != '.' && format('{0}/package-lock.json', inputs.working_directory) || '' }}
+          cache-dependency-path: ${{ inputs.cache == 'pnpm' && (inputs.working_directory != '.' && format('{0}/pnpm-lock.yaml', inputs.working_directory) || 'pnpm-lock.yaml') || inputs.cache == 'yarn' && (inputs.working_directory != '.' && format('{0}/yarn.lock', inputs.working_directory) || 'yarn.lock') || inputs.working_directory != '.' && format('{0}/package-lock.json', inputs.working_directory) || 'package-lock.json' }}
 
       - name: Install dependencies
         if: ${{ inputs.install_dependencies }}
-        run: npm ci
+        run: |
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          elif [ "${{ inputs.cache }}" == "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
 
       - name: Build packages
         if: ${{ inputs.build_packages }}
@@ -107,32 +116,69 @@ jobs:
 
       - name: Run linting
         if: ${{ inputs.run_lint }}
-        run: ${{ inputs.lint_command }}
+        run: |
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
+              pnpm run lint
+            elif [ "${{ inputs.cache }}" == "yarn" ]; then
+              yarn lint
+            else
+              npm run lint
+            fi
 
       - name: Run typescript checks
         if: ${{ inputs.run_checks }}
-        run: npm run types:check
+        run: |
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
+            pnpm run types:check
+          elif [ "${{ inputs.cache }}" == "yarn" ]; then
+            yarn types:check
+          else
+            npm run types:check
+          fi
 
-      - name: Run npm audit (JSON)
+      - name: Run audit (JSON)
         if: ${{ inputs.run_audit }}
         id: npm-audit-json
         continue-on-error: true
         run: |
-          npm audit --audit-level=${{ inputs.audit_level }} --json > audit.json 2>&1 || AUDIT_EXIT_CODE=$?
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
+            pnpm audit --audit-level=${{ inputs.audit_level }} --json > audit.json 2>&1 || AUDIT_EXIT_CODE=$?
+          elif [ "${{ inputs.cache }}" == "yarn" ]; then
+            yarn audit --level ${{ inputs.audit_level }} --json > audit.json 2>&1 || AUDIT_EXIT_CODE=$?
+          else
+            npm audit --audit-level=${{ inputs.audit_level }} --json > audit.json 2>&1 || AUDIT_EXIT_CODE=$?
+          fi
           echo "exit_code=${AUDIT_EXIT_CODE:-0}" >> $GITHUB_OUTPUT
 
-      - name: Convert npm audit JSON to Markdown
+      - name: Convert audit JSON to Markdown
         if: ${{ inputs.run_audit && steps.npm-audit-json.outcome != 'skipped' }}
         id: npm-audit
+        env:
+          PACKAGE_MANAGER: ${{ inputs.cache }}
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
         run: |
           REPORT_FILE=$(mktemp)
 
           # Check if audit.json exists and is valid JSON
           if [ ! -f audit.json ] || ! node -e "JSON.parse(require('fs').readFileSync('audit.json','utf8'))" 2>/dev/null; then
             # Fallback to text output if JSON parsing fails
-            TEXT_OUTPUT=$(npm audit --audit-level=${{ inputs.audit_level }} 2>&1 || true)
+            if [ "${{ inputs.cache }}" == "pnpm" ]; then
+              TEXT_OUTPUT=$(pnpm audit --audit-level=${{ inputs.audit_level }} 2>&1 || true)
+            elif [ "${{ inputs.cache }}" == "yarn" ]; then
+              TEXT_OUTPUT=$(yarn audit --level ${{ inputs.audit_level }} 2>&1 || true)
+            else
+              TEXT_OUTPUT=$(npm audit --audit-level=${{ inputs.audit_level }} 2>&1 || true)
+            fi
             {
-              echo "## ⚠️ npm audit error"
+              PM_NAME="${{ inputs.cache }}"
+              if [ "$PM_NAME" == "pnpm" ]; then
+                PM_DISPLAY="pnpm"
+              elif [ "$PM_NAME" == "yarn" ]; then
+                PM_DISPLAY="yarn"
+              else
+                PM_DISPLAY="npm"
+              fi
+              echo "## ⚠️ ${PM_DISPLAY} audit error"
               echo ""
               echo "Failed to generate audit report:"
               echo ""
@@ -180,8 +226,16 @@ jobs:
 
           const totalVulns = sevOrder.reduce((s,k)=>s+countOrZero(k),0);
 
+          const pm = process.env.PACKAGE_MANAGER || 'npm';
+          const pmName = pm === 'pnpm' ? 'pnpm' : pm === 'yarn' ? 'yarn' : 'npm';
+          const workDir = process.env.WORKING_DIRECTORY || '.';
+
           const md = [];
-          md.push(`## 📋 npm audit report`);
+          if (workDir !== '.') {
+            md.push(`## 📋 ${pmName} audit report - \`${workDir}\``);
+          } else {
+            md.push(`## 📋 ${pmName} audit report`);
+          }
           md.push('');
           md.push(`Generated: **${new Date().toISOString()}**`);
           md.push('');
@@ -247,11 +301,29 @@ jobs:
               let fixCell = '❌';
               if (v.fixAvailable) {
                 if (v.fixAvailable === true) {
-                  fixCell = '✅ \`npm audit fix\`';
+                  if (pm === 'pnpm') {
+                    fixCell = '✅ \`pnpm audit --fix\`';
+                  } else if (pm === 'yarn') {
+                    fixCell = '✅ \`yarn audit --fix\`';
+                  } else {
+                    fixCell = '✅ \`npm audit fix\`';
+                  }
                 } else if (v.fixAvailable.isSemVerMajor) {
-                  fixCell = '✅ \`npm audit fix --force\`<br>⚠️ **Breaking change**';
+                  if (pm === 'pnpm') {
+                    fixCell = '✅ \`pnpm update\`<br>⚠️ **Breaking change**';
+                  } else if (pm === 'yarn') {
+                    fixCell = '✅ Update manually<br>⚠️ **Breaking change**';
+                  } else {
+                    fixCell = '✅ \`npm audit fix --force\`<br>⚠️ **Breaking change**';
+                  }
                 } else {
-                  fixCell = '✅ \`npm audit fix\`';
+                  if (pm === 'pnpm') {
+                    fixCell = '✅ \`pnpm audit --fix\`';
+                  } else if (pm === 'yarn') {
+                    fixCell = '✅ \`yarn audit --fix\`';
+                  } else {
+                    fixCell = '✅ \`npm audit fix\`';
+                  }
                 }
               }
               
@@ -287,7 +359,13 @@ jobs:
 
           // Add fix instructions if vulnerabilities found
           if (totalVulns > 0) {
-            md.push(`> 💡 To fix these issues, run: \`npm audit fix\` or \`npm audit fix --force\` (for breaking changes)`);
+            if (pm === 'pnpm') {
+              md.push(`> 💡 To fix these issues, run: \`pnpm audit --fix\` or \`pnpm update\``);
+            } else if (pm === 'yarn') {
+              md.push(`> 💡 To fix these issues, run: \`yarn audit --fix\` or update packages manually`);
+            } else {
+              md.push(`> 💡 To fix these issues, run: \`npm audit fix\` or \`npm audit fix --force\` (for breaking changes)`);
+            }
           } else {
             md.push(`> ✅ No vulnerabilities found.`);
           }
@@ -320,13 +398,30 @@ jobs:
           # Cleanup
           rm -f audit.json
 
+      - name: Generate unique comment tag
+        if: ${{ inputs.run_audit && github.event_name == 'pull_request' }}
+        id: comment-tag
+        run: |
+          WORK_DIR="${{ inputs.working_directory }}"
+          CACHE="${{ inputs.cache }}"
+
+          # Sanitize working directory for use in tag (replace / with -, remove leading/trailing dots and slashes)
+          if [ "$WORK_DIR" != "." ]; then
+            SANITIZED_DIR=$(echo "$WORK_DIR" | sed 's/\//-/g' | sed 's/^\.//g' | sed 's/\.$//g' | sed 's/^-\|-$//g')
+            TAG="${CACHE}-audit-report-${SANITIZED_DIR}"
+          else
+            TAG="${CACHE}-audit-report"
+          fi
+
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
       - name: Create or update PR comment with audit results
         if: ${{ inputs.run_audit && github.event_name == 'pull_request' && steps.npm-audit.outcome != 'skipped' }}
         uses: thollander/actions-comment-pull-request@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file-path: ${{ steps.npm-audit.outputs.report_file }}
-          comment-tag: npm-audit-report
+          comment-tag: ${{ steps.comment-tag.outputs.tag }}
           mode: upsert
           create-if-not-exists: ${{ steps.npm-audit.outputs.has_vulnerabilities || 'false' }}
 
