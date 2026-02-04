@@ -71,7 +71,7 @@ on:
         default: "."
 
 jobs:
-  check_app:
+  check:
     runs-on: ${{ inputs.agent }}
     defaults:
       run:
