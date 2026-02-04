@@ -65,6 +65,11 @@ on:
         type: string
         description: "The value of --audit-level flag"
         default: "moderate"
+      fail_on_critical_high:
+        required: false
+        type: boolean
+        description: "Whether to fail the workflow on critical or high vulnerabilities"
+        default: true
       working_directory:
         required: false
         type: string
@@ -326,7 +331,7 @@ jobs:
           create-if-not-exists: ${{ steps.npm-audit.outputs.has_vulnerabilities || 'false' }}
 
       - name: Fail on critical or high vulnerabilities
-        if: ${{ inputs.run_audit && steps.npm-audit.outcome != 'skipped' }}
+        if: ${{ inputs.run_audit && inputs.fail_on_critical_high && steps.npm-audit.outcome != 'skipped' }}
         run: |
           CRITICAL="${{ steps.npm-audit.outputs.critical_count || '0' }}"
           HIGH="${{ steps.npm-audit.outputs.high_count || '0' }}"
