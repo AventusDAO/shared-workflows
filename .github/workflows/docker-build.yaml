@@ -75,6 +75,11 @@ on:
         required: false
         type: boolean
         default: false
+      docker_tag_suffix:
+        required: false
+        type: string
+        description: "Custom suffix for Docker tag (e.g., 'v0.1.0'). If provided and create_git_ref_dtag is true, uses this instead of extracting from GITHUB_REF."
+        default: ""
       docker_args_list:
         required: false
         type: string
@@ -169,13 +174,20 @@ jobs:
           fi
           echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - name: Create docker tag for ${GITHUB_REF#refs/*/}
+      - name: Create docker tag for git ref or custom tag
         if: ${{ inputs.create_git_ref_dtag }}
         run: |
           if [[ -n $DOCKER_TAG ]]; then
             TAG_PREFIX="$DOCKER_TAG,"
           fi
-          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+          # Use docker_tag_suffix if provided, otherwise extract from GITHUB_REF
+          if [ -n "${{ inputs.docker_tag_suffix }}" ]; then
+            TAG_NAME="${{ inputs.docker_tag_suffix }}"
+          else
+            TAG_NAME="${GITHUB_REF#refs/*/}"
+          fi
+          echo "DOCKER_TAG=$TAG_PREFIX$ECR_REPO:$TAG_NAME" >> $GITHUB_ENV
+          echo "Using Docker tag: $ECR_REPO:$TAG_NAME"
 
       - name: Build and push
         if: ${{ env.DOCKER_TAG != '' }}
@@ -191,5 +203,5 @@ jobs:
       - name: Fail if no DOCKER_TAGS are specified
         if: ${{ env.DOCKER_TAG == '' }}
         run: |
-          echo "NO DOCKER TAGS SPECIFIED. ACTION FAILED. PLEASE SET ONE OR MORE OF THE FOLLOWING VARIABLES TO TRUE: create_pr_dtag, create_latest_dtag, create_commit_hash_dtag, create_git_tag_dtag"
+          echo "NO DOCKER TAGS SPECIFIED. ACTION FAILED. PLEASE SET ONE OR MORE OF THE FOLLOWING VARIABLES TO TRUE: create_pr_dtag, create_latest_dtag, create_commit_hash_dtag, create_git_ref_dtag"
           exit 1
