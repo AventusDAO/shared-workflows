@@ -48,6 +48,10 @@ on:
         required: false
         type: boolean
         default: true
+      run_test_coverage:
+        required: false
+        type: boolean
+        default: false
       run_lint:
         required: false
         type: boolean
@@ -134,6 +138,17 @@ jobs:
             yarn types:check
           else
             npm run types:check
+          fi
+
+      - name: Run test coverage
+        if: ${{ inputs.run_test_coverage }}
+        run: |
+          if [ "${{ inputs.cache }}" == "pnpm" ]; then
+            pnpm run test:coverage
+          elif [ "${{ inputs.cache }}" == "yarn" ]; then
+            yarn test:coverage
+          else
+            npm run test:coverage
           fi
 
       - name: Run audit (JSON)
