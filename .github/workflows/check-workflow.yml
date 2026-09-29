@@ -41,7 +41,7 @@ jobs:
         run: pip install pre-commit
 
       - name: Install TFLint
-        run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        uses: terraform-linters/setup-tflint@v6
 
       - name: Install `pre-commit` hooks
         run: pre-commit install
