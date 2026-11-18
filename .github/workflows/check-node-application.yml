@@ -176,6 +176,7 @@ jobs:
         env:
           PACKAGE_MANAGER: ${{ inputs.cache }}
           WORKING_DIRECTORY: ${{ inputs.working_directory }}
+          AUDIT_LEVEL: ${{ inputs.audit_level }}
         run: |
           REPORT_FILE=$(mktemp)
 
@@ -218,8 +219,44 @@ jobs:
 
           const audit = JSON.parse(fs.readFileSync('audit.json','utf8'));
 
+          const SEVERITIES = ['info','low','moderate','high','critical'];
+
+          // pnpm: an advisory the repository has chosen to ignore is left out of `advisories`
+          // but is still counted in `metadata.vulnerabilities`. The repository lists it by
+          // GHSA id in pnpm-workspace.yaml, under `auditConfig.ignoreGhsas` (pnpm 10 and 11;
+          // newer versions still read it but name it `audit.ignore`). Ignoring by CVE id
+          // (`auditConfig.ignoreCves`) only exists in pnpm 10: later versions do not read it.
+          //
+          // Counting from the metadata would fail the build on an advisory the repository has
+          // documented as accepted, so the listed advisories are counted instead.
+          //
+          // pnpm only lists advisories at or above --audit-level. A severity below that
+          // level cannot be seen in the list, so its metadata count is kept: the count is
+          // never lowered for a severity that was not actually inspected.
+          function summarizePnpm(a) {
+            const level = SEVERITIES.indexOf(process.env.AUDIT_LEVEL || 'low');
+            const listed = { info:0, low:0, moderate:0, high:0, critical:0 };
+            for (const x of Object.values(a.advisories)) {
+              if (x.severity in listed) listed[x.severity]++;
+            }
+            const reported = a.metadata?.vulnerabilities || {};
+            const counts = {};
+            let ignored = 0;
+            SEVERITIES.forEach((severity, rank) => {
+              const total = Number.isFinite(reported[severity]) ? reported[severity] : listed[severity];
+              // An unknown level (-1) lists everything pnpm was asked for: trust the list.
+              const visible = level < 0 || rank >= level;
+              counts[severity] = visible ? listed[severity] : total;
+              if (visible) ignored += Math.max(0, total - listed[severity]);
+            });
+            return { totalDependencies: a.metadata?.totalDependencies ?? null, counts, ignored };
+          }
+
           // Supports npm v6 ("advisories") and npm v7+ ("vulnerabilities" + auditReportVersion)
           function summarize(a) {
+            if (process.env.PACKAGE_MANAGER === 'pnpm' && a.advisories && typeof a.advisories === 'object') {
+              return summarizePnpm(a);
+            }
             // npm v7+ format
             if (a.metadata?.vulnerabilities) {
               return {
@@ -239,7 +276,7 @@ jobs:
             return { totalDependencies: null, counts: {} };
           }
 
-          const { totalDependencies, counts } = summarize(audit);
+          const { totalDependencies, counts, ignored = 0 } = summarize(audit);
 
           const sevOrder = ['critical','high','moderate','low','info'];
           const countOrZero = (k) => Number.isFinite(counts?.[k]) ? counts[k] : 0;
@@ -262,6 +299,9 @@ jobs:
           md.push(`### Summary`);
           if (totalDependencies != null) md.push(`- Total dependencies: **${totalDependencies}**`);
           md.push(`- Total vulnerabilities: **${totalVulns}**`);
+          if (ignored > 0) {
+            md.push(`- Ignored by this repository's audit configuration (not counted above): **${ignored}**`);
+          }
           md.push('');
           md.push(`| Severity | Count |`);
           md.push(`|---|---:|`);
